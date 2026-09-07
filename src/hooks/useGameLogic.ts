@@ -1463,6 +1463,19 @@ export const useGameLogic = (gameStarted: boolean = true) => {
           newState.bossBattle = bossBattle;
         }
       } else if (newState.levelPhase === 'boss') {
+        // SAFETY NET: during an ACTIVE boss fight, ovens must never stay frozen.
+        // If any cooking oven still has pausedElapsed set (from any transition that
+        // paused it and failed to resume), unfreeze it here so pizzas keep cooking
+        // and can be pulled. This guarantees the "stuck pizza" bug can't survive a
+        // boss fight regardless of which code path froze the oven.
+        if (newState.bossBattle && !newState.bossBattle.bossDefeated) {
+          const anyFrozen = Object.values(newState.ovens).some(
+            (o: any) => o.cooking && !o.burned && o.pausedElapsed !== undefined
+          );
+          if (anyFrozen) {
+            newState.ovens = calculateOvenPauseState(newState.ovens, false, now);
+          }
+        }
         // Boss battle in progress - check if boss is defeated
         if (newState.bossBattle && newState.bossBattle.bossDefeated) {
           // Pause any cooking ovens so they don't burn during the complete/store screens

@@ -1447,6 +1447,11 @@ export const useGameLogic = (gameStarted: boolean = true) => {
         if (newState.bossIncomingAlert && now >= newState.bossIncomingAlert.endTime) {
           newState.levelPhase = 'boss';
           newState.bossIncomingAlert = undefined;
+          // Resume any ovens that were paused during the boss_incoming alert so
+          // in-progress pizzas keep cooking (and can be pulled) during the fight.
+          // Without this, a pizza cooking when the boss appeared stays frozen mid-cook:
+          // it never finishes, never burns, and can't be served.
+          newState.ovens = calculateOvenPauseState(newState.ovens, false, now);
           // Spawn the boss
           const bossType = getBossForLevel(newState.level)!;
           const scaling = getBossScaling(newState.level);
